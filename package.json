@@ -1,0 +1,105 @@
+{
+	"name": "lua-obfuscator",
+	"displayName": "lua-obfuscator",
+	"description": "Lua Obfuscator using LuaObfuscator.com",
+	"publisher": "ferib",
+	"repository": "https://github.com/ferib/lua-obfuscator-plugin",
+	"icon": "icon.png",
+	"version": "2.0.2",
+	"engines": {
+		"vscode": "^1.45.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"activationEvents": [
+		"onLanguage:lua"
+	],
+	"main": "./extension.js",
+	"contributes": {
+		"configuration": {
+			"title": "lua-obfuscator",
+			"properties": {
+				"lua-obfuscator.outputType": {
+					"type": "string",
+					"default": "copy to clipboard",
+					"description": "location to place obfuscated script",
+					"enum": [
+						"replace current file",
+						"create new file",
+						"copy to clipboard"
+					],
+					"enumDescriptions": [
+						"replaces current document with obfuscated script",
+						"creates new document with obfuscated script as contents",
+						"copies obfuscated script to clipboard"
+					]
+				},
+				"lua-obfuscator.apikey": {
+					"type": "string",
+					"default": "test",
+					"description": "The API key for luaObfuscator.com"
+				},
+				"lua-obfuscator.MinifyAll": {
+					"type": "boolean",
+					"default": false,
+					"description": "minify output"
+				},
+				"lua-obfuscator.ControlFlowFlattenV1AllBlocks": {
+					"type": "integer",
+					"default": 0,
+					"description": "Control flow flatten X % blocks (100 for all)"
+				},
+				"lua-obfuscator.EncryptStrings": {
+					"type": "boolean",
+					"default": false,
+					"description": "Encrypt All Strings"
+				},
+				"lua-obfuscator.SwizzleLookups": {
+					"type": "boolean",
+					"default": false,
+					"description": "Swizzle all lookups"
+				},
+				"lua-obfuscator.MutateAllLiterals": {
+					"type": "boolean",
+					"default": true,
+					"description": "Mutate all literals"
+				},
+				"lua-obfuscator.Virtualize": {
+					"type": "boolean",
+					"default": false,
+					"description": "Virtualize Lua5.1 using (custom) IronBrew2"
+				}
+			}
+		},
+		"commands": [
+			{
+				"command": "lua.obfuscate",
+				"title": "luaObfuscator | obfuscate current script"
+			}
+		]
+	},
+	"scripts": {
+		"lint": "eslint .",
+		"pretest": "npm run lint",
+		"test": "node ./test/runTest.js"
+	},
+	"devDependencies": {
+		"@types/glob": "^7.1.1",
+		"@types/mocha": "^7.0.2",
+		"@types/node": "^13.11.0",
+		"@types/vscode": "^1.45.0",
+		"eslint": "^6.8.0",
+		"glob": "^7.1.6",
+		"mocha": "^10.2.0",
+		"typescript": "^3.8.3",
+		"vscode-test": "^1.3.0"
+	},
+	"dependencies": {
+		"fetch": "^1.1.0",
+		"node-fetch": "^2.6.9"
+	},
+	"__metadata": {
+		"publisherDisplayName": "ferib"
+	}
+}
