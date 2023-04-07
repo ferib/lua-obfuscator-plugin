@@ -19,11 +19,6 @@ obfuscate.command = "lua.obfuscate";
 obfuscate.tooltip = "Obfuscate current script";
 obfuscate.text = "$(pencil) obfuscate";
 
-let obfuscateHighlighted = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
-obfuscateHighlighted.command = "lua.obfuscatehighlighted";
-obfuscateHighlighted.tooltip = "Obfuscate current highlighted code";
-obfuscateHighlighted.text = "$(pencil) obfuscatehighlighted";
-
 let profiler = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
 profiler.command = "lua.injectProfiler";
 profiler.tooltip = "Inject profiler sesnors";
@@ -32,7 +27,6 @@ profiler.text = "$(eye) Profiler";
 
 function activate(context) {
 	obfuscate.show()
-	obfuscateHighlighted.show()
 	profiler.show()
 
 	function callObfuscator(script, config, apikey, callback)
@@ -290,7 +284,6 @@ function activate(context) {
 // this method is called when your extension is deactivated
 function deactivate() {
 	obfuscate.dispose()
-	obfuscateHighlighted.dispose()
 	profiler.dispose()
 	//changelog_.dispose()
 }
