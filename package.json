@@ -75,7 +75,11 @@
 		"commands": [
 			{
 				"command": "lua.obfuscate",
-				"title": "luaObfuscator | obfuscate current script"
+				"title": "luaObfuscator | Obfuscate current script"
+			},
+			{
+				"command": "lua.obfuscatehighlighted",
+				"title": "luaObfuscator | Obfuscate current highlighted code"
 			}
 		]
 	},
