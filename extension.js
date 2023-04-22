@@ -3,12 +3,11 @@
 // dependencies
 const vscode = require('vscode');
 const fetch = require('node-fetch');
-const { callbackify } = require('util');
+//const { callbackify } = require('util');
 
 // constants
 const constants = {
 	"obfuscate-url": 'https://luaobfuscator.com/api/obfuscator/',
-	//"changelog-url": 'https://luaobfuscator.com/api/changelog.txt'
 };
 
 var previousScripts = { }
@@ -24,98 +23,141 @@ profiler.command = "lua.injectProfiler";
 profiler.tooltip = "Inject profiler sesnors";
 profiler.text = "$(eye) Profiler";
 
+// Helpers
+function getAPIKey()
+{
+	const settings = vscode.workspace.getConfiguration('lua-obfuscator')
+	if (!settings || settings['apikey'] == "") {
+		vscode.window.showErrorMessage("API Key is necessary for usage of extension!")
+		return
+	}
+}
+function getOutputType()
+{
+	const settings = vscode.workspace.getConfiguration('lua-obfuscator')
+	if (!settings) {
+		vscode.window.showErrorMessage("Failed opening settings!")
+		return
+	}
 
-function activate(context) {
-	obfuscate.show()
-	profiler.show()
+	return settings['outputType'];
+}
+function parseConfig()
+{
+	const settings = vscode.workspace.getConfiguration('lua-obfuscator')
+	if (!settings) {
+		vscode.window.showErrorMessage("Failed opening settings!")
+		return
+	}
+	
+	// build a config based on the VSCode settings
+	var config = {
+		CustomPlugins: {
+			ControlFlowFlattenV1AllBlocks: [ settings['ControlFlowFlattenV1AllBlocks'] ],
+			//EncryptFuncDeclaration: [ settings['EncryptFuncDeclaration'] ],
+			EncryptStrings: [ (settings['EncryptStrings'] ? 100 : 0) ],
+			SwizzleLookups: [ (settings['SwizzleLookups'] ? 100 : 0) ],
+			MutateAllLiterals: [ (settings['MutateAllLiterals'] ? 100 : 0) ],
+		},
+		Virtualize: settings['Virtualize']
+	}
 
-	function callObfuscator(script, config, apikey, callback)
+	if (settings['MinifyAll'] == "None")
 	{
-		fetch(constants["obfuscate-url"] + "newscript", {
+		config.MinifiyAll = false; // default false, but lets be sure
+	}
+	else if (settings['MinifyAll'] == "Minify")
+	{
+		config.MinifiyAll = true; // write small-ish
+		config.CustomPlugins.Minifier = true; // variable renaming
+	}
+	else
+	{
+		config.MinifiyAll = false; // beautified instead of single line
+		// NOTE: line numbers are NOT exactly kept!
+		config.CustomPlugins.Minifier = true; // variable renaming
+	}
+	return config;
+}
+function callObfuscator(script, config, apikey, callback)
+{
+	fetch(constants["obfuscate-url"] + "newscript", {
+		method: "POST",
+		headers: { 
+			"Content-Type": "application/json",
+			"apikey": apikey
+		},
+		body: script
+	})
+	.then((res) => {
+		if (res.status != 200)
+		{
+			vscode.window.showErrorMessage("Failed uploading script! (Error: " + res.status + ")");
+			throw Error();
+		}			
+		return res.json()
+	})
+	.then(body => {
+		// Send one obfuscation request
+		fetch(constants["obfuscate-url"] + "Obfuscate", {
 			method: "POST",
 			headers: { 
 				"Content-Type": "application/json",
-				"apikey": apikey
+				"apikey": apikey,
+				"sessionId": body.sessionId
 			},
-			body: script
+			
+			// TODO: add free obf settings in here?
+			body: JSON.stringify(config)
 		})
-		.then((res) => {
-			if (res.status != 200)
+		.then(res => {
+			if (res.status == 404)
 			{
-				vscode.window.showErrorMessage("Failed uploading script! (Error: " + res.status + ")");
+				// session was not found/created?
+				vscode.window.showErrorMessage("Lua script failed to upload!");
 				throw Error();
-			}			
+			}
+
 			return res.json()
 		})
-		.then(body => {
-			// Send one obfuscation request
-			fetch(constants["obfuscate-url"] + "Obfuscate", {
-				method: "POST",
-				headers: { 
-					"Content-Type": "application/json",
-					"apikey": apikey,
-					"sessionId": body.sessionId
-				},
-				
-				// TODO: add free obf settings in here?
-				body: JSON.stringify(config)
-			})
-			.then(res => {
-				if (res.status == 404)
-				{
-					// session was not found/created?
-					vscode.window.showErrorMessage("Lua script failed to upload!");
-					throw Error();
-				}
-
-				return res.json()
-			})
-			.then(body => {callback(body)})
-			.catch(function(reason) {
-				vscode.window.showErrorMessage("Fatal obfuscation error!")
-			})
-		})
+		.then(body => {callback(body)})
 		.catch(function(reason) {
-			vscode.window.showErrorMessage("Failed to upload script!")
-			return
+			vscode.window.showErrorMessage("Fatal obfuscation error!")
 		})
-	}
+	})
+	.catch(function(reason) {
+		vscode.window.showErrorMessage("Failed to upload script!")
+		return
+	})
+}
+function obfuscateScript(script, callback)
+{
+	const key = getAPIKey();
+	if (key == null)
+		return;
 
+	const config = parseConfig();
+	if (config == null)
+		return;
+
+	// Upload Lua script
+	vscode.window.showInformationMessage("Obfuscation starting...")
+	callObfuscator(script, config, key, callback)
+}
+function activate(context) {
+	obfuscate.show()
+	profiler.show()
+	
 	vscode.commands.registerCommand('lua.obfuscate', function () {
-		const settings = vscode.workspace.getConfiguration('lua-obfuscator')
-		
-		if (!settings || settings['apikey'] == "") {
-			vscode.window.showErrorMessage("API Key is necessary for usage of extension!")
-			return
-		} else if (!vscode.window.activeTextEditor) {
-			vscode.window.showErrorMessage("Please open a text file before obfuscating!")
+		// check if current file is being eddited open
+		if (!vscode.window.activeTextEditor) {
+			vscode.window.showErrorMessage("Please open a file before obfuscating!")
 			return
 		}
-
 		var text_editor = vscode.window.activeTextEditor
 
-		// notification
-		vscode.window.showInformationMessage("Obfuscation starting...")
 
-		// Upload Lua script
-		let key =  settings['apikey']
-		var config = {
-			CustomPlugins: {
-				ControlFlowFlattenV1AllBlocks: [ settings['ControlFlowFlattenV1AllBlocks'] ],
-				//EncryptFuncDeclaration: [ settings['EncryptFuncDeclaration'] ],
-				EncryptStrings: [ (settings['EncryptStrings'] ? 100 : 0) ],
-				SwizzleLookups: [ (settings['SwizzleLookups'] ? 100 : 0) ],
-				MutateAllLiterals: [ (settings['MutateAllLiterals'] ? 100 : 0) ],
-			},
-			Virtualize: settings['Virtualize']
-		}
-
-		if (settings['MinifyAll'])
-		{
-			config.MinifiyAll = true; // write small-ish
-			config.CustomPlugins.Minifier = true; // variable renaming
-		}
-		callObfuscator(text_editor.document.getText(), config, key, function(body)
+		obfuscateScript(text_editor.document.getText(), function(body)
 		{
 			// display error msg?
 			if (body.message != null)
@@ -123,12 +165,13 @@ function activate(context) {
 				vscode.window.showErrorMessage("Obfuscationed failed!\n--------------\n" + body.message);
 				throw Error();
 			}
-
+	
 			// determine output type & act on it
-			if (settings['outputType'] == 'create new file') {
+			const outputType = getOutputType();
+			if (outputType == 'create new file') {
 				vscode.workspace.openTextDocument({"content": `${body.code}`, "language": "lua"})
 				vscode.window.showInformationMessage("obfuscated, opening new tab")
-			} else if (settings['outputType'] == 'replace current file') {
+			} else if (outputType == 'replace current file') {
 				// get range object for current editor
 				var editor_full_range = new vscode.Range(
 					text_editor.document.positionAt(0),
@@ -138,13 +181,14 @@ function activate(context) {
 				// replace current editor text with new text, requires range object
 				text_editor.edit(editBuilder => {editBuilder.replace(editor_full_range, body.code)})
 				vscode.window.showInformationMessage("obfuscated, and replaced current file")
-			} else if (settings['outputType'] == 'copy to clipboard') {
+			} else if (outputType == 'copy to clipboard') {
 				vscode.env.clipboard.writeText(body.code);
 				vscode.window.showInformationMessage("obfuscated, copied to clipboard")
 			}
-		})
+		});
 	});
 
+	// NOTE: This is old garbage, I bet no one even used this. Deprecated?
 	vscode.commands.registerCommand('lua.injectProfiler', function () {
 		const settings = vscode.workspace.getConfiguration('lua-obfuscator')
 		
@@ -206,17 +250,9 @@ function activate(context) {
 		}
 	});
 
+	// TODO: Fix the highlighed obfuscator so it will be overwritten and not appended?
 	context.subscriptions.push(vscode.commands.registerCommand('lua.obfuscatehighlighted', function () {
-		const settings = vscode.workspace.getConfiguration('lua-obfuscator')
 		var text_editor = vscode.window.activeTextEditor
-		
-		if (!settings || settings['apikey'] == "") {
-			vscode.window.showErrorMessage("API Key is necessary for usage of extension!")
-			return
-		} else if (!text_editor) {
-			vscode.window.showErrorMessage("Please open a text file before obfuscating!")
-			return
-		}
 		
 		const selection = text_editor.selection;
 		if (!selection) {
@@ -228,28 +264,9 @@ function activate(context) {
 			vscode.window.showErrorMessage("Please, highlight a text before obfuscating!")
 			return
 		}
-		// notification
-		vscode.window.showInformationMessage("Obfuscation starting...")
-
-		// Upload Lua script
-		let key =  settings['apikey']
-		var config = {
-			CustomPlugins: {
-				ControlFlowFlattenV1AllBlocks: [ settings['ControlFlowFlattenV1AllBlocks'] ],
-				//EncryptFuncDeclaration: [ settings['EncryptFuncDeclaration'] ],
-				EncryptStrings: [ (settings['EncryptStrings'] ? 100 : 0) ],
-				SwizzleLookups: [ (settings['SwizzleLookups'] ? 100 : 0) ],
-				MutateAllLiterals: [ (settings['MutateAllLiterals'] ? 100 : 0) ],
-			},
-			Virtualize: settings['Virtualize']
-		}
-
-		if (settings['MinifyAll'])
-		{
-			config.MinifiyAll = true; // write small-ish
-			config.CustomPlugins.Minifier = true; // variable renaming
-		}
-		callObfuscator(selectedText, config, key, function(body)
+		
+		// call selectedText
+		obfuscateScript(selectedText, function(body)
 		{
 			// display error msg?
 			if (body.message != null)
@@ -259,10 +276,11 @@ function activate(context) {
 			}
 
 			// determine output type & act on it
-			if (settings['outputType'] == 'create new file') {
+			const outputType = getOutputType()
+			if (outputType == 'create new file') {
 				vscode.workspace.openTextDocument({"content": `${body.code}`, "language": "lua"})
 				vscode.window.showInformationMessage("obfuscated, opening new tab")
-			} else if (settings['outputType'] == 'replace current file') {
+			} else if (outputType == 'replace current file') {
 				// get range object for current editor
 				var editor_full_range = new vscode.Range(
 					text_editor.document.positionAt(0),
@@ -272,11 +290,11 @@ function activate(context) {
 				// replace current editor text with new text, requires range object
 				text_editor.edit(editBuilder => {editBuilder.replace(editor_full_range, body.code)})
 				vscode.window.showInformationMessage("obfuscated, and replaced current file")
-			} else if (settings['outputType'] == 'copy to clipboard') {
+			} else if (outputType == 'copy to clipboard') {
 				vscode.env.clipboard.writeText(body.code);
 				vscode.window.showInformationMessage("obfuscated, copied to clipboard")
 			}
-		})
+		});
 	}));
 }
 //exports.activate = activate;

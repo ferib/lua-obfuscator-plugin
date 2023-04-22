@@ -2,6 +2,11 @@
 
 All notable changes to the `lua-obfuscator` extension will be documented in this file.
 
+## [2.0.3]
+
+- Add 'obfuscatehighlighted'
+- Added extra option for Minify
+
 ## [2.0.2]
 
 - Bugfixes

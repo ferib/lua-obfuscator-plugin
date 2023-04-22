@@ -41,9 +41,10 @@
 					"description": "The API key for luaObfuscator.com"
 				},
 				"lua-obfuscator.MinifyAll": {
-					"type": "boolean",
-					"default": false,
-					"description": "minify output"
+					"type": "string",
+					"default": "None",
+					"enum": ["None", "Minify", "Minify _(but keep lines)_"],
+    				"description": "Select the minification option"
 				},
 				"lua-obfuscator.ControlFlowFlattenV1AllBlocks": {
 					"type": "integer",
