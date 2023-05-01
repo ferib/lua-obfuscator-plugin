@@ -31,6 +31,7 @@ function getAPIKey()
 		vscode.window.showErrorMessage("API Key is necessary for usage of extension!")
 		return
 	}
+	return settings['apikey'];
 }
 function getOutputType()
 {
