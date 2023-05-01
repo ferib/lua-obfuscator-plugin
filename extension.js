@@ -54,11 +54,11 @@ function parseConfig()
 	// build a config based on the VSCode settings
 	var config = {
 		CustomPlugins: {
-			ControlFlowFlattenV1AllBlocks: [ settings['ControlFlowFlattenV1AllBlocks'] ],
-			//EncryptFuncDeclaration: [ settings['EncryptFuncDeclaration'] ],
+			ControlFlowFlattenV1AllBlocks: [ (settings['ControlFlowFlattenV1AllBlocks'] ? 100 : 0) ],
 			EncryptStrings: [ (settings['EncryptStrings'] ? 100 : 0) ],
 			SwizzleLookups: [ (settings['SwizzleLookups'] ? 100 : 0) ],
 			MutateAllLiterals: [ (settings['MutateAllLiterals'] ? 100 : 0) ],
+			EncryptFuncDeclaration: [ (settings['EncryptFuncDeclaration'] ? 100 : 0) ],
 		},
 		Virtualize: settings['Virtualize']
 	}

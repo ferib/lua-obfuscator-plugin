@@ -43,13 +43,13 @@
 				"lua-obfuscator.MinifyAll": {
 					"type": "string",
 					"default": "None",
-					"enum": ["None", "Minify", "Minify _(but keep lines)_"],
+					"enum": ["None", "Minify", "Minify (but keep lines)"],
     				"description": "Select the minification option"
 				},
 				"lua-obfuscator.ControlFlowFlattenV1AllBlocks": {
-					"type": "integer",
-					"default": 0,
-					"description": "Control flow flatten X % blocks (100 for all)"
+					"type": "boolean",
+					"default": false,
+					"description": "Control flow flattening"
 				},
 				"lua-obfuscator.EncryptStrings": {
 					"type": "boolean",
@@ -65,6 +65,11 @@
 					"type": "boolean",
 					"default": true,
 					"description": "Mutate all literals"
+				},
+				"lua-obfuscator.EncryptFuncDeclaration": {
+					"type": "boolean",
+					"default": false,
+					"description": "Encrypt global function names on declaration"
 				},
 				"lua-obfuscator.Virtualize": {
 					"type": "boolean",
