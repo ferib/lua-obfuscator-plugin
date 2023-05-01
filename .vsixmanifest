@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
   <Metadata>
-    <Identity Language="en-US" Id="lua-obfuscator" Version="2.0.2" Publisher="Ferib"/>
+    <Identity Language="en-US" Id="lua-obfuscator" Version="2.0.3" Publisher="Ferib"/>
     <DisplayName>LuaObfuscator</DisplayName>
     <Description xml:space="preserve">Obfuscate Lua with LuaObfuscator.com</Description>
-    <Tags>Lua, Obfuscator, Minifievsce packager</Tags>
+    <Tags>Lua, Obfuscator, Minifier</Tags>
     <Categories>Other</Categories>
     <GalleryFlags>Public</GalleryFlags>
     <Badges></Badges>
@@ -15,7 +15,7 @@
       <Property Id="Microsoft.VisualStudio.Code.LocalizedLanguages" Value="" />
       <Property Id="Microsoft.VisualStudio.Services.GitHubFlavoredMarkdown" Value="true" />
     </Properties>
-    <Icon>extension/gamertime.png</Icon>
+    <Icon>icon.png</Icon>
   </Metadata>
   <Installation>
     <InstallationTarget Id="Microsoft.VisualStudio.Code"/>
