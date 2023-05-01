@@ -2,9 +2,13 @@
 
 All notable changes to the `lua-obfuscator` extension will be documented in this file.
 
-## [2.0.3]
+## [2.0.4]
 
 - Add 'EncryptFuncDeclaration' option
+- Bugfixes
+
+## [2.0.3]
+
 - Add 'obfuscatehighlighted'
 - Added extra option for Minify
 

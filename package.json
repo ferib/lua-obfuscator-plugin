@@ -5,7 +5,7 @@
 	"publisher": "ferib",
 	"repository": "https://github.com/ferib/lua-obfuscator-plugin",
 	"icon": "icon.png",
-	"version": "2.0.3",
+	"version": "2.0.4",
 	"engines": {
 		"vscode": "^1.45.0"
 	},
