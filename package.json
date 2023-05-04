@@ -91,6 +91,10 @@
 			{
 				"command": "lua.obfuscatehighlighted",
 				"title": "luaObfuscator | Obfuscate current highlighted code"
+			},
+			{
+				"command": "lua.helper",
+				"title": "luaObfuscator | Advanced helper panel"
 			}
 		]
 	},

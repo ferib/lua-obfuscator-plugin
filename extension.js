@@ -162,6 +162,100 @@ function obfuscateScript(script, callback)
 	vscode.window.showInformationMessage("Obfuscation starting...")
 	callObfuscator(script, config, key, callback)
 }
+function deobfuscateErrorReport(stacktrace, rawConfig)
+{
+	// Verify stacktrace
+	if (stacktrace.length == 0)
+	{
+		// this is either bad or good
+		vscode.window.showErrorMessage("Empty stacktrace!?")
+		return;
+	}
+
+	// Check config?
+	/*
+	let config;
+	try
+	{
+		config = JSON.parse(rawConfig)
+	}
+	catch (err)
+	{
+		vscode.window.showErrorMessage("Failed parsing the given config!")
+		return null;
+	}
+	*/
+
+	// TODO: figure out how to JSON.parse correctly lol!
+	let config = parseConfig();
+	if (config == null)
+		return;
+
+	// get apikey
+	const key = getAPIKey();
+	if (key == null)
+		return;
+
+	// find file based on crashlog name?
+	stacktrace.forEach(function(x) {
+		let path = x.path //"test.lua";
+		let fileContent = "";
+		// TODO: sometimes the end of the path is replaced with `...`, replace with `**.lua` ?
+		vscode.workspace.findFiles(`**/${path}`, '', 1).then((uris) => {
+			if (uris.length === 0)
+				return;
+		
+			// Check if the file is already open in VSCode
+			const openDocument = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === uris.toString());
+			if (openDocument) {
+				// File is open, use its content
+				fileContent = openDocument.getText();
+			} else {
+				// File is not open, read from disk
+				/*
+				vscode.workspace.fs.readFile(uris).then(content => {
+					fileContent = content.toString();
+				}, error => {
+					//Error(error);
+					vscode.window.showErrorMessage(error);
+				});
+				*/
+			}
+			
+			//
+			if (fileContent == "")
+				return;
+
+			// Obfuscate the script and locate the lines?
+			callObfuscator(fileContent, config, key, function(body) 
+			{
+				// display error msg?
+				if (body.message != null)
+				{
+					vscode.window.showErrorMessage("Obfuscationed failed!\n--------------\n" + body.message);
+					throw Error();
+				}
+
+				
+				body.message
+				const lines = body.code.split('\n');
+				if (x.line < 1 || x.line > lines.length) {
+					return; // error?
+				}
+				let crashLine = lines[x.line - 1];
+				
+				vscode.window.showInformationMessage(`${x.path}:${x.line}: '${crashLine}'`)
+
+				// Next, figure out how we can identify this? if we had an AST we
+				// could parse it, find the line/token and use that to match against
+				// the original source. Alternative is to use some kind of mapping
+				// and find original source? or pray the source is not properly
+				// obfuscated and use lookup names?
+			});
+		})
+	})
+}
+
 function activate(context) {
 	obfuscate.show()
 	profiler.show()
@@ -314,8 +408,118 @@ function activate(context) {
 			}
 		});
 	}));
+
+	// create helper panel
+	let disposable = vscode.commands.registerCommand("lua.helper", () => {
+		const column = {
+            viewColumn: vscode.ViewColumn.Beside,
+            preserveFocus: true,
+        };
+
+        const options = { 
+			enableScripts: true 
+		};
+
+		const panel = vscode.window.createWebviewPanel(
+			"lua.test",
+			"The doctor is in!",
+			column,
+			options
+		);
+
+		//panel.reveal();
+		panel.webview.html = getWebviewContent()
+
+		// Handle request from panel
+		panel.webview.onDidReceiveMessage(
+			message => {
+			  switch (message.command) {
+				case 'parse':
+					vscode.window.showInformationMessage(message.crashlog);
+					vscode.window.showInformationMessage(message.config);
+					
+					const regex = /\[string\s+"(.+)"\]:([\d]+):\s+(.+)/g;
+
+					let results = []
+
+					let matches;
+					while ((matches = regex.exec(message.crashlog))) {
+						const [, path, lineNum, message] = matches;
+						console.log(`Path: ${path}, Line: ${lineNum}, Message: ${message}`);
+						results.push({path, line: parseInt(lineNum), message});
+					}
+					
+					// TODO: find the correct script?
+					deobfuscateErrorReport(results, message.config)
+
+					return;
+			  }
+			},
+			undefined,
+			context.subscriptions
+		  );
+	})
+
+	/*
+	PARSING Wow Errors "\[string\s+"(.+)"\]:([\d]+):\s+(.+)":
+```
+6358x [string "rotations/druid/restoration/spell..."]:1364: attempt to index local 'v88' (a nil value)
+[string "rotations/druid/restoration/spells.lua"]:1364: in function `?'
+[string "utils/Spell.lua"]:695: in function `Lifebloom'
+[string "rotations/druid/restoration/rotation.lua"]:241: in function <[string "rotations/druid/restoration/rotat..."]:15>
+[string "utils/Actor.lua"]:50: in function <[string "utils/Actor.lua"]:49>
+[string "utils/tick.lua"]:635: in function <[string "utils/tick.lua"]:473>
+
+Locals:
+asd = xxxx
+```
+	*/
+
+	context.subscriptions.push(disposable);
 }
 //exports.activate = activate;
+
+// webview for Wow Lua error parsing
+function getWebviewContent()
+{
+	return `<html lang="en"> 
+	<head>
+		<meta charset="utf-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<style>
+			#test {
+				display: flex;
+				flex-flow: column nowrap;
+				justify-content: center;
+				align-items: center;
+				width: 100%;
+				height: 100%;
+			}
+		</style>
+	</head>
+	<body>
+			<h1>WoW Error Parser</h1>
+			<p>
+			Please paste your errors below, and make sure to have the correct configuration inserted
+			</p>
+			<textarea id="crashlog" rows="20" cols="50"></textarea>
+			<textarea id="config" rows="6" cols="50"></textarea>
+			<br/>
+			<button onclick="parseError()">Parse</button>
+			<script>
+				const vscode = acquireVsCodeApi();
+
+				function parseError() {
+					vscode.postMessage({
+						command: 'parse',
+						crashlog: document.getElementById('crashlog').value,
+						config: document.getElementById('config').value, 
+					})
+				}
+		</script>
+	</body>
+</html>`;
+}
 
 // this method is called when your extension is deactivated
 function deactivate() {
