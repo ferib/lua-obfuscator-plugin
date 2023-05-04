@@ -8,6 +8,14 @@ Achieve an identical level of obfuscation as the website for as long as the inpu
 
 ![obfuscator example](./img/obfuscator_obfuscate.png)
 
+# How to Use
+
+Open any `.lua` file and click the button on the bottom of the IDE as seen below.
+
+![obfuscator button in vscode](./img/vscode_obfuscator_button.png)
+
+Before you obfuscate you might want to change the settings.
+
 ## Settings
 
 Configure the Obfuscator to your needs. The settings tab can be found at `file` (or `Code` for OSX) -> `preferences` -> `settings` -> `extensions` -> `lua-obfuscator`
@@ -15,6 +23,7 @@ Configure the Obfuscator to your needs. The settings tab can be found at `file` 
 ![obfuscator settings](./img/obfuscator_settings.png)
 
 > Please note that not all features are supported in this plugin! _(only stable)_
+
 
 # Credits
 
