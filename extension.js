@@ -52,6 +52,23 @@ function parseConfig()
 	}
 	
 	// build a config based on the VSCode settings
+	const serializedJsonConfig = settings['RawConfig'];
+	if (serializedJsonConfig != null && serializedJsonConfig != "")
+	{
+		try
+		{
+			var rawConfig = JSON.parse(serializedJsonConfig)
+			return rawConfig
+		}
+		catch (err)
+		{
+			// Block so user knows?
+			//vscode.window.showWarningMessage("Failed parsing RawConfig, proceeding with vscode config!")
+			vscode.window.showErrorMessage("Failed parsing RawConfig!")
+			return null;
+		}
+	}
+
 	var config = {
 		CustomPlugins: {
 			ControlFlowFlattenV1AllBlocks: [ (settings['ControlFlowFlattenV1AllBlocks'] ? 100 : 0) ],

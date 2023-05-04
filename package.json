@@ -5,7 +5,7 @@
 	"publisher": "ferib",
 	"repository": "https://github.com/ferib/lua-obfuscator-plugin",
 	"icon": "icon.png",
-	"version": "2.0.4",
+	"version": "2.0.5",
 	"engines": {
 		"vscode": "^1.45.0"
 	},
@@ -75,6 +75,11 @@
 					"type": "boolean",
 					"default": false,
 					"description": "Virtualize Lua5.1 using (custom) IronBrew2"
+				},
+				"lua-obfuscator.RawConfig": {
+					"type": ["string"],
+					"default": "",
+					"description": "JSON Config (leave empty to not use this)"
 				}
 			}
 		},

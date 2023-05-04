@@ -2,6 +2,10 @@
 
 All notable changes to the `lua-obfuscator` extension will be documented in this file.
 
+## [2.0.5]
+
+- Add raw config option
+
 ## [2.0.4]
 
 - Add 'EncryptFuncDeclaration' option
