@@ -162,7 +162,7 @@ function obfuscateScript(script, callback)
 	vscode.window.showInformationMessage("Obfuscation starting...")
 	callObfuscator(script, config, key, callback)
 }
-function deobfuscateErrorReport(stacktrace, rawConfig)
+function deobfuscateErrorReport(stacktrace, rawConfig, isMinified)
 {
 	// Verify stacktrace
 	if (stacktrace.length == 0)
@@ -226,8 +226,17 @@ function deobfuscateErrorReport(stacktrace, rawConfig)
 			if (fileContent == "")
 				return;
 
-			// Obfuscate the script and locate the lines?
-			callObfuscator(fileContent, config, key, function(body) 
+			// only do if 'minified'
+			if (isMinified)
+			{
+				// Obfuscate the script and locate the lines?
+				callObfuscator(fileContent, config, key, parseContent);
+			} else {
+				// pass as-is
+				parseContent({code: fileContent})
+			}
+			
+			function parseContent(body) 
 			{
 				// display error msg?
 				if (body.message != null)
@@ -235,15 +244,23 @@ function deobfuscateErrorReport(stacktrace, rawConfig)
 					vscode.window.showErrorMessage("Obfuscationed failed!\n--------------\n" + body.message);
 					throw Error();
 				}
-
 				
-				body.message
 				const lines = body.code.split('\n');
 				if (x.line < 1 || x.line > lines.length) {
 					return; // error?
 				}
-				let crashLine = lines[x.line - 1];
+
+				let crashLine = lines[x.line-1];
+				let debug = ""
+				for (let i=0; i < 10; i++)
+				{
+					if (i >= 5)
+						debug += lines[x.line + (i-5)];
+					else
+						debug += lines[x.line - i];
+				}
 				
+				//vscode.window.showInformationMessage(`${x.path}:${x.line}: '${crashLine}'\n\n${debug}`)
 				vscode.window.showInformationMessage(`${x.path}:${x.line}: '${crashLine}'`)
 
 				// Next, figure out how we can identify this? if we had an AST we
@@ -251,7 +268,83 @@ function deobfuscateErrorReport(stacktrace, rawConfig)
 				// the original source. Alternative is to use some kind of mapping
 				// and find original source? or pray the source is not properly
 				// obfuscated and use lookup names?
-			});
+
+				// NOTE: this works for my usecase, but it can't be this ugly
+				let tokens = []
+				if (crashLine.includes("."))
+				{
+					let dotIndex = crashLine.indexOf(".")
+					if (dotIndex !== -1 )
+					{
+						let substr = crashLine.substring(dotIndex, crashLine.length);
+						let len = substr.length
+
+						// find end, may it be ' ', '(', '.' or whatever?
+						// TODO: use Regex?
+						let endIndex = substr.indexOf(" ")
+						if (endIndex === -1)
+							endIndex = substr.indexOf("(")
+						if (endIndex === -1)
+							endIndex = substr.indexOf(".")
+						if(endIndex !== -1)
+							len = endIndex + 1
+
+						let possLookup = substr.substr(0, len)
+						tokens.push(possLookup)
+
+						// now find the token in original source and mark it?
+						let index = fileContent.indexOf(possLookup)
+
+						// find line by index
+						const cleanLines = fileContent.split('\n') // source split
+						let indexCount = 0;
+						let lineRange = openDocument.lineAt(0).range;
+
+						for (let i = 0; i < cleanLines.length; i++)
+						{
+							const lineLen = cleanLines[i].length
+							if (index >= indexCount && index < indexCount + lineLen)
+							{
+								// found line!
+								const errLine = openDocument.lineAt(i);
+								lineRange = errLine.range;
+								
+								// remove tabs?
+								function countLeadingTabs(str) {
+									const match = str.match(/^[\t\s]*/);
+									return match ? match[0].length : 0;
+								}
+								
+								lineRange = new vscode.Range(
+									new vscode.Position(
+										lineRange.start.line, 
+										lineRange.start.character + countLeadingTabs(errLine.text)
+									),
+									lineRange.end
+								)
+								break;
+							}
+							indexCount += lineLen // add line count
+						}
+
+						
+						const decorationType = vscode.window.createTextEditorDecorationType({
+							backgroundColor: '#FF00007F',
+							gutterIconPath: '/img/profiler_button.png',
+							border: '1px solid white',
+							borderRadius: '3px',
+
+							overviewRulerColor: 'red',
+							overviewRulerLane: vscode.OverviewRulerLane.Full,
+						});
+
+						// find the editor that belongs to the document
+						const editor = vscode.window.visibleTextEditors.find(editor => editor.document.uri.toString() === openDocument.uri.toString());
+						editor.setDecorations(decorationType, [lineRange]);	
+					}
+				}
+
+			}
 		})
 	})
 }
@@ -435,8 +528,8 @@ function activate(context) {
 			message => {
 			  switch (message.command) {
 				case 'parse':
-					vscode.window.showInformationMessage(message.crashlog);
-					vscode.window.showInformationMessage(message.config);
+					//vscode.window.showInformationMessage(message.crashlog);
+					//vscode.window.showInformationMessage(message.config);
 					
 					const regex = /\[string\s+"(.+)"\]:([\d]+):\s+(.+)/g;
 
@@ -445,12 +538,12 @@ function activate(context) {
 					let matches;
 					while ((matches = regex.exec(message.crashlog))) {
 						const [, path, lineNum, message] = matches;
-						console.log(`Path: ${path}, Line: ${lineNum}, Message: ${message}`);
+						//console.log(`Path: ${path}, Line: ${lineNum}, Message: ${message}`);
 						results.push({path, line: parseInt(lineNum), message});
 					}
 					
 					// TODO: find the correct script?
-					deobfuscateErrorReport(results, message.config)
+					deobfuscateErrorReport(results, message.config, message.isMinified)
 
 					return;
 			  }
@@ -498,24 +591,27 @@ function getWebviewContent()
 		</style>
 	</head>
 	<body>
-			<h1>WoW Error Parser</h1>
-			<p>
-			Please paste your errors below, and make sure to have the correct configuration inserted
-			</p>
-			<textarea id="crashlog" rows="20" cols="50"></textarea>
-			<textarea id="config" rows="6" cols="50"></textarea>
-			<br/>
-			<button onclick="parseError()">Parse</button>
-			<script>
-				const vscode = acquireVsCodeApi();
+		<h1>WoW Error Parser</h1>
+		<p>
+		Please paste your errors below, and make sure to have the correct configuration inserted
+		</p>
+		<textarea style="color: indianred; background-color: #e0e0; width: 100%" id="crashlog" rows="20" cols="50"></textarea>
+		<textarea style="color: darkcyan; background-color: #e0e0; width: 100%" id="config" rows="6" cols="50"></textarea>
+		<br/>
+		<button style="background-color: rebeccapurple;" onclick="parseError()">Parse</button>
+		<input type="checkbox" id="isMinified" checked>
+		<label for="isMinified">isMinified</label>
+		<script>
+			const vscode = acquireVsCodeApi();
 
-				function parseError() {
-					vscode.postMessage({
-						command: 'parse',
-						crashlog: document.getElementById('crashlog').value,
-						config: document.getElementById('config').value, 
-					})
-				}
+			function parseError() {
+				vscode.postMessage({
+					command: 'parse',
+					crashlog: document.getElementById('crashlog').value,
+					config: document.getElementById('config').value, 
+					isMinified: document.getElementById('isMinified').checked, 
+				})
+			}
 		</script>
 	</body>
 </html>`;
