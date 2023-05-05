@@ -595,7 +595,7 @@ function getWebviewContent()
 		<p>
 		Please paste your errors below, and make sure to have the correct configuration inserted
 		</p>
-		<textarea style="color: indianred; background-color: #e0e0; width: 100%" id="crashlog" rows="20" cols="50"></textarea>
+		<textarea style="color: indianred; background-color: #e0e0; width: 100%" id="crashlog" rows="20" cols="50" ondrop="drop(event)" ondragover="allowDrop(event)"></textarea>
 		<textarea style="color: darkcyan; background-color: #e0e0; width: 100%" id="config" rows="6" cols="50"></textarea>
 		<br/>
 		<button style="background-color: rebeccapurple;" onclick="parseError()">Parse</button>
@@ -611,6 +611,14 @@ function getWebviewContent()
 					config: document.getElementById('config').value, 
 					isMinified: document.getElementById('isMinified').checked, 
 				})
+			}
+
+			function drop(evt) {
+				console.log(evt)
+			}
+
+			function allowDrop(evt) {
+				console.log(evt)
 			}
 		</script>
 	</body>
