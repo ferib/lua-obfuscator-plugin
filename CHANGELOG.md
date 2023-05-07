@@ -5,6 +5,9 @@ All notable changes to the `lua-obfuscator` extension will be documented in this
 ## [2.0.5]
 
 - Add raw config option
+- Add `lua.help` panel
+- Add Wow Error Parser
+- Add Wow Error Inspector
 
 ## [2.0.4]
 

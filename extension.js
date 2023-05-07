@@ -3,6 +3,7 @@
 // dependencies
 const vscode = require('vscode');
 const fetch = require('node-fetch');
+const { inspect } = require('util');
 //const { callbackify } = require('util');
 
 // constants
@@ -162,7 +163,7 @@ function obfuscateScript(script, callback)
 	vscode.window.showInformationMessage("Obfuscation starting...")
 	callObfuscator(script, config, key, callback)
 }
-function deobfuscateErrorReport(stacktrace, rawConfig, isMinified)
+async function deobfuscateErrorReport(stacktrace, rawConfig, isMinified, inspectOnly)
 {
 	// Verify stacktrace
 	if (stacktrace.length == 0)
@@ -197,35 +198,47 @@ function deobfuscateErrorReport(stacktrace, rawConfig, isMinified)
 		return;
 
 	// find file based on crashlog name?
-	stacktrace.forEach(function(x) {
+	stacktrace.forEach(async function(x) {
 		let path = x.path //"test.lua";
 		let fileContent = "";
 		// TODO: sometimes the end of the path is replaced with `...`, replace with `**.lua` ?
-		vscode.workspace.findFiles(`**/${path}`, '', 1).then((uris) => {
+		vscode.workspace.findFiles(`**/${path}`, '', 1).then(async (uris) => {
 			if (uris.length === 0)
+			{
+				vscode.window.showWarningMessage(`Could not find '${path}'`);
 				return;
+			}
+				
 		
 			// Check if the file is already open in VSCode
-			const openDocument = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === uris.toString());
+			let openDocument = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === uris.toString());
 			if (openDocument) {
 				// File is open, use its content
 				fileContent = openDocument.getText();
 			} else {
-				// File is not open, read from disk
+				// File is not open, read from disk?
 				/*
-				vscode.workspace.fs.readFile(uris).then(content => {
+				vscode.workspace.fs.readFile(uris[0]).then(content => {
 					fileContent = content.toString();
 				}, error => {
 					//Error(error);
 					vscode.window.showErrorMessage(error);
 				});
 				*/
+				// just open it
+				openDocument = await vscode.workspace.openTextDocument(uris[0])
+				await vscode.window.showTextDocument(openDocument); // open!
+				fileContent = openDocument.getText()
 			}
 			
 			//
 			if (fileContent == "")
+			{
+				vscode.window.showErrorMessage(`Failed reading '${path}'`);
 				return;
-
+			}
+			
+			
 			// only do if 'minified'
 			if (isMinified)
 			{
@@ -235,8 +248,8 @@ function deobfuscateErrorReport(stacktrace, rawConfig, isMinified)
 				// pass as-is
 				parseContent({code: fileContent})
 			}
-			
-			function parseContent(body) 
+
+			async function parseContent(body) 
 			{
 				// display error msg?
 				if (body.message != null)
@@ -244,106 +257,173 @@ function deobfuscateErrorReport(stacktrace, rawConfig, isMinified)
 					vscode.window.showErrorMessage("Obfuscationed failed!\n--------------\n" + body.message);
 					throw Error();
 				}
-				
-				const lines = body.code.split('\n');
-				if (x.line < 1 || x.line > lines.length) {
-					return; // error?
-				}
-
-				let crashLine = lines[x.line-1];
-				let debug = ""
-				for (let i=0; i < 10; i++)
+				// inspect means we obfuscate the whole file and mark pos for
+				// manual inspection	
+				if (inspectOnly)
 				{
-					if (i >= 5)
-						debug += lines[x.line + (i-5)];
-					else
-						debug += lines[x.line - i];
-				}
-				
-				//vscode.window.showInformationMessage(`${x.path}:${x.line}: '${crashLine}'\n\n${debug}`)
-				vscode.window.showInformationMessage(`${x.path}:${x.line}: '${crashLine}'`)
-
-				// Next, figure out how we can identify this? if we had an AST we
-				// could parse it, find the line/token and use that to match against
-				// the original source. Alternative is to use some kind of mapping
-				// and find original source? or pray the source is not properly
-				// obfuscated and use lookup names?
-
-				// NOTE: this works for my usecase, but it can't be this ugly
-				let tokens = []
-				if (crashLine.includes("."))
-				{
-					let dotIndex = crashLine.indexOf(".")
-					if (dotIndex !== -1 )
+					// overwrite existing file
+					let existingEditor = vscode.window.visibleTextEditors.find(editor => editor.document.uri.toString() === openDocument.uri.toString());
+					if (!existingEditor)
 					{
-						let substr = crashLine.substring(dotIndex, crashLine.length);
-						let len = substr.length
-
-						// find end, may it be ' ', '(', '.' or whatever?
-						// TODO: use Regex?
-						let endIndex = substr.indexOf(" ")
-						if (endIndex === -1)
-							endIndex = substr.indexOf("(")
-						if (endIndex === -1)
-							endIndex = substr.indexOf(".")
-						if(endIndex !== -1)
-							len = endIndex + 1
-
-						let possLookup = substr.substr(0, len)
-						tokens.push(possLookup)
-
-						// now find the token in original source and mark it?
-						let index = fileContent.indexOf(possLookup)
-
-						// find line by index
-						const cleanLines = fileContent.split('\n') // source split
-						let indexCount = 0;
-						let lineRange = openDocument.lineAt(0).range;
-
-						for (let i = 0; i < cleanLines.length; i++)
+						openDocument = await vscode.workspace.openTextDocument(uris[0])
+						await vscode.window.showTextDocument(openDocument); // open up?
+						existingEditor = vscode.window.visibleTextEditors.find(editor => editor.document.uri.toString() === openDocument.uri.toString());
+						if (!existingEditor)
 						{
-							const lineLen = cleanLines[i].length
-							if (index >= indexCount && index < indexCount + lineLen)
-							{
-								// found line!
-								const errLine = openDocument.lineAt(i);
-								lineRange = errLine.range;
-								
-								// remove tabs?
-								function countLeadingTabs(str) {
-									const match = str.match(/^[\t\s]*/);
-									return match ? match[0].length : 0;
-								}
-								
-								lineRange = new vscode.Range(
-									new vscode.Position(
-										lineRange.start.line, 
-										lineRange.start.character + countLeadingTabs(errLine.text)
-									),
-									lineRange.end
-								)
-								break;
-							}
-							indexCount += lineLen // add line count
+							vscode.window.showErrorMessage(`Failed opening ${path}`);
+							return
 						}
+					}
+					existingEditor.edit(editBuilder => {
+						var editor_full_range = new vscode.Range(
+							openDocument.positionAt(0),
+							openDocument.positionAt(openDocument.getText().length)
+						)
+						editBuilder.replace(editor_full_range, body.code);
+					}).then(() => {
+						// make sure its edited
+						vscode.window.showInformationMessage(`Obfuscated ${path}`);
 
-						
+						// write content to file and mark line(s)
 						const decorationType = vscode.window.createTextEditorDecorationType({
 							backgroundColor: '#FF00007F',
 							gutterIconPath: '/img/profiler_button.png',
 							border: '1px solid white',
 							borderRadius: '3px',
-
 							overviewRulerColor: 'red',
 							overviewRulerLane: vscode.OverviewRulerLane.Full,
 						});
 
+						// find line
+						const errLine = openDocument.lineAt(x.line-1);
+						let lineRange = errLine.range;
+
+						// remove tabs?
+						function countLeadingTabs(str) {
+							const match = str.match(/^[\t\s]*/);
+							return match ? match[0].length : 0;
+						}
+
+						lineRange = new vscode.Range(
+							new vscode.Position(
+								lineRange.start.line, 
+								lineRange.start.character + countLeadingTabs(errLine.text)
+							),
+							lineRange.end
+						)
+
+						// TODO: re-apply decorations when switching tabs!!
+
 						// find the editor that belongs to the document
 						const editor = vscode.window.visibleTextEditors.find(editor => editor.document.uri.toString() === openDocument.uri.toString());
 						editor.setDecorations(decorationType, [lineRange]);	
+					})
+					//});
+					
+				} else {
+					const lines = body.code.split('\n');
+					if (x.line < 1 || x.line > lines.length) {
+						return; // error?
+					}
+	
+					let crashLine = lines[x.line-1];
+					let debug = ""
+					for (let i=0; i < 10; i++)
+					{
+						if (i >= 5)
+							debug += lines[x.line + (i-5)];
+						else
+							debug += lines[x.line - i];
+					}
+					
+					//vscode.window.showInformationMessage(`${x.path}:${x.line}: '${crashLine}'\n\n${debug}`)
+					vscode.window.showInformationMessage(`${x.path}:${x.line}` + 
+					"\n---------------------------------" + 
+					`\n${crashLine}` +
+					"\n---------------------------------" + 
+					`\n${debug}\n`);
+	
+					// Next, figure out how we can identify this? if we had an AST we
+					// could parse it, find the line/token and use that to match against
+					// the original source. Alternative is to use some kind of mapping
+					// and find original source? or pray the source is not properly
+					// obfuscated and use lookup names?
+	
+					// NOTE: this works for my usecase, but it can't be this ugly
+					let tokens = []
+					if (crashLine.includes("."))
+					{
+						let dotIndex = crashLine.indexOf(".")
+						if (dotIndex !== -1 )
+						{
+							let substr = crashLine.substring(dotIndex, crashLine.length);
+							let len = substr.length
+	
+							// find end, may it be ' ', '(', '.' or whatever?
+							// TODO: use Regex?
+							let endIndex = substr.indexOf(" ")
+							if (endIndex === -1)
+								endIndex = substr.indexOf("(")
+							if (endIndex === -1)
+								endIndex = substr.indexOf(".")
+							if(endIndex !== -1)
+								len = endIndex + 1
+	
+							let possLookup = substr.substr(0, len)
+							tokens.push(possLookup)
+	
+							// now find the token in original source and mark it?
+							let index = fileContent.indexOf(possLookup)
+	
+							// find line by index
+							const cleanLines = fileContent.split('\n') // source split
+							let indexCount = 0;
+							let lineRange = openDocument.lineAt(0).range;
+	
+							for (let i = 0; i < cleanLines.length; i++)
+							{
+								const lineLen = cleanLines[i].length
+								if (index >= indexCount && index < indexCount + lineLen)
+								{
+									// found line!
+									const errLine = openDocument.lineAt(i);
+									lineRange = errLine.range;
+									
+									// remove tabs?
+									function countLeadingTabs(str) {
+										const match = str.match(/^[\t\s]*/);
+										return match ? match[0].length : 0;
+									}
+									
+									lineRange = new vscode.Range(
+										new vscode.Position(
+											lineRange.start.line, 
+											lineRange.start.character + countLeadingTabs(errLine.text)
+										),
+										lineRange.end
+									)
+									break;
+								}
+								indexCount += lineLen // add line count
+							}
+	
+							
+							const decorationType = vscode.window.createTextEditorDecorationType({
+								backgroundColor: '#FF00007F',
+								gutterIconPath: '/img/profiler_button.png',
+								border: '1px solid white',
+								borderRadius: '3px',
+	
+								overviewRulerColor: 'red',
+								overviewRulerLane: vscode.OverviewRulerLane.Full,
+							});
+	
+							// find the editor that belongs to the document
+							const editor = vscode.window.visibleTextEditors.find(editor => editor.document.uri.toString() === openDocument.uri.toString());
+							editor.setDecorations(decorationType, [lineRange]);	
+						}
 					}
 				}
-
 			}
 		})
 	})
@@ -526,25 +606,22 @@ function activate(context) {
 		// Handle request from panel
 		panel.webview.onDidReceiveMessage(
 			message => {
-			  switch (message.command) {
+			const regex = /\[string\s+"(.+)"\]:([\d]+):\s+(.+)/g;
+			let results = []
+			let matches;
+			let inspectOnly = false;
+
+			switch (message.command) {
+				case 'inspect':
+					inspectOnly = true;
 				case 'parse':
-					//vscode.window.showInformationMessage(message.crashlog);
-					//vscode.window.showInformationMessage(message.config);
-					
-					const regex = /\[string\s+"(.+)"\]:([\d]+):\s+(.+)/g;
-
-					let results = []
-
-					let matches;
 					while ((matches = regex.exec(message.crashlog))) {
 						const [, path, lineNum, message] = matches;
 						//console.log(`Path: ${path}, Line: ${lineNum}, Message: ${message}`);
 						results.push({path, line: parseInt(lineNum), message});
 					}
 					
-					// TODO: find the correct script?
-					deobfuscateErrorReport(results, message.config, message.isMinified)
-
+					deobfuscateErrorReport(results, message.config, message.isMinified, inspectOnly)
 					return;
 			  }
 			},
@@ -599,6 +676,7 @@ function getWebviewContent()
 		<textarea style="color: darkcyan; background-color: #e0e0; width: 100%" id="config" rows="6" cols="50"></textarea>
 		<br/>
 		<button style="background-color: rebeccapurple;" onclick="parseError()">Parse</button>
+		<button style="background-color: aliceblue;" onclick="inspectError()">Inspect</button>
 		<input type="checkbox" id="isMinified" checked>
 		<label for="isMinified">isMinified</label>
 		<script>
@@ -610,6 +688,15 @@ function getWebviewContent()
 					crashlog: document.getElementById('crashlog').value,
 					config: document.getElementById('config').value, 
 					isMinified: document.getElementById('isMinified').checked, 
+				})
+			}
+
+			function inspectError() {
+				vscode.postMessage({
+					command: 'inspect',
+					crashlog: document.getElementById('crashlog').value,
+					config: document.getElementById('config').value,
+					isMinified: true
 				})
 			}
 
