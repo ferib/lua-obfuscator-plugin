@@ -1,11 +1,10 @@
 {
-	"env": {
-		"browser": false,
-		"commonjs": true,
-		"es6": true,
-		"node": true,
-		"mocha": true
-	},
+  "env": {
+    "browser": true,
+    "node": true,
+    "es2021": true
+  },
+  "parser": "@typescript-eslint/parser",
 	"parserOptions": {
 		"ecmaVersion": 2018,
 		"ecmaFeatures": {
@@ -21,5 +20,6 @@
 		"no-unused-vars": "warn",
 		"constructor-super": "warn",
 		"valid-typeof": "warn"
-	}
+	},
+  "plugins": ["prettier", "simple-import-sort", "import", "@typescript-eslint"]
 }

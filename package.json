@@ -5,7 +5,7 @@
 	"publisher": "ferib",
 	"repository": "https://github.com/ferib/lua-obfuscator-plugin",
 	"icon": "icon.png",
-	"version": "2.0.5",
+	"version": "2.1.0",
 	"engines": {
 		"vscode": "^1.45.0"
 	},
@@ -15,7 +15,7 @@
 	"activationEvents": [
 		"onLanguage:lua"
 	],
-	"main": "./extension.js",
+	"main": "./dist/extension.js",
 	"contributes": {
 		"configuration": {
 			"title": "lua-obfuscator",
@@ -35,16 +35,15 @@
 						"copies obfuscated script to clipboard"
 					]
 				},
-				"lua-obfuscator.apikey": {
-					"type": "string",
-					"default": "test",
-					"description": "The API key for luaObfuscator.com"
-				},
 				"lua-obfuscator.MinifyAll": {
 					"type": "string",
 					"default": "None",
-					"enum": ["None", "Minify", "Minify (but keep lines)"],
-    				"description": "Select the minification option"
+					"enum": [
+						"None",
+						"Minify",
+						"Minify (but keep lines)"
+					],
+					"description": "Select the minification option"
 				},
 				"lua-obfuscator.ControlFlowFlattenV1AllBlocks": {
 					"type": "boolean",
@@ -77,7 +76,9 @@
 					"description": "Virtualize Lua5.1 using (custom) IronBrew2"
 				},
 				"lua-obfuscator.RawConfig": {
-					"type": ["string"],
+					"type": [
+						"string"
+					],
 					"default": "",
 					"description": "JSON Config (leave empty to not use this)"
 				}
@@ -99,26 +100,33 @@
 		]
 	},
 	"scripts": {
-		"lint": "eslint .",
-		"pretest": "npm run lint",
-		"test": "node ./test/runTest.js"
+        "vscode:prepublish": "npm run compile",
+		"launch": "code --install-extension lua*.*.vsix && code .",
+		"compile": "cp src/utils/*.{json,html} dist/ && tsc",
+		"watch": "tsc -watch -p ./",
+		"pretest": "npm run compile && npm run lint",
+		"lint": "eslint src --ext ts"
 	},
 	"devDependencies": {
 		"@types/glob": "^7.1.1",
 		"@types/mocha": "^7.0.2",
-		"@types/node": "^13.11.0",
+		"@types/node": "16.x",
 		"@types/vscode": "^1.45.0",
-		"eslint": "^6.8.0",
+		"@typescript-eslint/eslint-plugin": "^5.59.1",
+		"@typescript-eslint/parser": "^5.59.1",
+		"eslint": "^8.39.0",
+		"eslint-plugin-prettier": "4.2.1",
 		"glob": "^7.1.6",
 		"mocha": "^10.2.0",
-		"typescript": "^3.8.3",
-		"vscode-test": "^1.3.0"
-	},
-	"dependencies": {
-		"fetch": "^1.1.0",
-		"node-fetch": "^2.6.9"
+		"typescript": "^5.0.4",
+		"vsce": "^2.15.0",
+		"vscode-test": "^1.3.0",
+        "prettier": "2.8.1"
 	},
 	"__metadata": {
 		"publisherDisplayName": "ferib"
+	},
+	"dependencies": {
+		"axios": "^1.4.0"
 	}
 }
