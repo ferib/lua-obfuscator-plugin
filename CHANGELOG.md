@@ -2,6 +2,13 @@
 
 All notable changes to the `lua-obfuscator` extension will be documented in this file.
 
+## [2.1.0]
+- Removed profiler feature
+- Improved helper panel
+- Fixed obfuscate highlighted replacing
+- Refactored into TypeScript
+- Other bugfixes
+
 ## [2.0.5]
 
 - Add raw config option

@@ -1,4 +1,7 @@
 node_modules
-.vscode-test/
+node_modules/**
+dist
+dist/**
 *.vsix
-*-lock.json
+*.log
+*.tsbuildinfo
