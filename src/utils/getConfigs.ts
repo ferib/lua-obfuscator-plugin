@@ -26,6 +26,7 @@ export type Config = {
   };
   Virtualize: boolean;
   MinifyAll: boolean;
+  Debug: boolean;
 };
 
 export function getOutputType() {
@@ -63,6 +64,7 @@ export function parseConfig(): Config {
     },
     Virtualize: !!settings.get("Virtualize"),
     MinifyAll: false,
+    Debug: false,
   };
 
   switch (settings.MinifyAll) {

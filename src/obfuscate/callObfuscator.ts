@@ -15,9 +15,11 @@ type Response = {code: string|null,message:string|null, sessionId: string|null}
 
 export async function callObfuscator(
   script: string,
-  callback: Callback
+  callback: Callback,
+  debug: boolean = false,
 ): Promise<void> {
   const config = parseConfig();
+  config.Debug = debug
   console.log(constants.obfuscateUrl + "newscript")
   console.log(script)
   const newScript : AxiosResponse<Response> = await axios

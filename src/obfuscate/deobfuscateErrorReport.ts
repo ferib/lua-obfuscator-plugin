@@ -5,7 +5,7 @@ import { callObfuscator } from "./callObfuscator";
 export async function deobfuscateErrorReport(
   stacktrace: any,
   isMinified: boolean,
-  inspectOnly: any
+  inspectOnly: boolean
 ) {
   // Verify stacktrace
   if (stacktrace.length == 0) {
@@ -33,7 +33,9 @@ export async function deobfuscateErrorReport(
       // only do if 'minified'
       if (isMinified) {
         // Obfuscate the script and locate the lines?
-        callObfuscator(fileContent, parseContent);
+
+        // TODO: Take the 'variables' mapping and use it in parseContent
+        callObfuscator(fileContent, parseContent, true);
       } else {
         // pass as-is
         parseContent({ code: fileContent });
