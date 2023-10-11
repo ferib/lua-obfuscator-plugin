@@ -1,5 +1,6 @@
 import { getOutputType } from "../utils/getConfigs";
 import * as vscode from "vscode";
+import { ERR_NO_FILE_TO_OBFUSCATE} from "./utils";
 
 export function obfuscateBody(code: string) {
   const outputType = getOutputType();
@@ -9,7 +10,7 @@ export function obfuscateBody(code: string) {
   } else if (outputType == "replace current file") {
     const text_editor = vscode.window.activeTextEditor;
     if (!text_editor) {
-      vscode.window.showErrorMessage("Please open a file before obfuscating!");
+      vscode.window.showErrorMessage(ERR_NO_FILE_TO_OBFUSCATE);
       return;
     }
     // get range object for current editor

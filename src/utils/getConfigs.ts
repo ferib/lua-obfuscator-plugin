@@ -41,11 +41,11 @@ export function getOutputType() {
     | "copy to clipboard";
 }
 
-export function parseConfig(): Config {
+export function parseConfig(): Config|null {
   const settings = vscode.workspace.getConfiguration("lua-obfuscator");
   if (!settings) {
     vscode.window.showErrorMessage("Failed opening settings!");
-    throw new Error();
+    return null
   }
 
   const config: Config = {

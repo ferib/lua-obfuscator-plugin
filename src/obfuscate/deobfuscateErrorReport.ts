@@ -27,7 +27,7 @@ export async function deobfuscateErrorReport(
       fileContent = await getFileContents(path, uris);
       if (!fileContent) {
         vscode.window.showErrorMessage("Failed opening file!");
-        throw new Error("Failed opening file!");
+        return
       }
 
       // only do if 'minified'
