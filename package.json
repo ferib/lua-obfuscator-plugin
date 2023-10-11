@@ -102,7 +102,8 @@
 	"scripts": {
         "vscode:prepublish": "npm run compile",
 		"launch": "code --install-extension lua*.*.vsix && code .",
-		"compile": "cp src/utils/*.{json,html} dist/ && tsc",
+		"compile": "cp src/utils/*.{json,html} ./dist/ && tsc",
+		"compile-wsl": "wsl cp src/utils/*.{json,html} ./dist/ && tsc",
 		"watch": "tsc -watch -p ./",
 		"pretest": "npm run compile && npm run lint",
 		"lint": "eslint src --ext ts"
