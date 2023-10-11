@@ -4,6 +4,7 @@ import { obfuscateScript } from "./obfuscate/callObfuscator";
 import { hightlight } from "./cmd/hightlight";
 import { helper } from "./cmd/helper";
 import { obfuscateBody } from "./cmd/obfuscate";
+import { ERR_NO_FILE_TO_OBFUSCATE } from "./cmd/utils";
 
 let obfuscate = vscode.window.createStatusBarItem(
   vscode.StatusBarAlignment.Left
@@ -16,8 +17,8 @@ export function activate(context: vscode.ExtensionContext) {
   obfuscate.show();
   vscode.commands.registerCommand("lua.obfuscate", function () {
     if (!vscode.window.activeTextEditor) {
-      vscode.window.showErrorMessage("Please open a file before obfuscating!");
-      throw new Error("Please open a file before obfuscating!");
+      vscode.window.showErrorMessage(ERR_NO_FILE_TO_OBFUSCATE);
+        return
     }
     obfuscateScript(
       vscode.window.activeTextEditor.document.getText(),

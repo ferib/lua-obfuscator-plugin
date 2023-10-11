@@ -2,27 +2,30 @@ import * as vscode from "vscode";
 import { obfuscateScript } from "../obfuscate/callObfuscator";
 import { getOutputType } from "../utils/getConfigs";
 
+const ERR_NO_HIGHLIGHT = "Please, highlight a text before obfuscating!"
+const ERR_NO_FILE_TO_HIGHLIGHT = "Please open a file before obfuscating!"
+
 export function hightlight(): any {
   const text_editor = vscode.window.activeTextEditor;
   if (!text_editor) {
-    vscode.window.showErrorMessage("Please open a file before obfuscating!");
-    throw Error();
+    vscode.window.showErrorMessage(ERR_NO_FILE_TO_HIGHLIGHT);
+        return
   }
   const selection = text_editor.selection;
 
   if (!selection) {
     vscode.window.showErrorMessage(
-      "Please, highlight a text before obfuscating!"
+            ERR_NO_HIGHLIGHT
     );
-    throw Error();
+        return
   }
 
   const selectedText = text_editor.document.getText(selection);
   if (!selectedText) {
     vscode.window.showErrorMessage(
-      "Please, highlight a text before obfuscating!"
+            ERR_NO_HIGHLIGHT
     );
-    throw Error();
+        return
   }
 
   obfuscateScript(selectedText, function (code) {
