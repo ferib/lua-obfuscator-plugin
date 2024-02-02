@@ -19,6 +19,7 @@ export function activate(context: vscode.ExtensionContext) {
       vscode.window.showErrorMessage("Please open a file before obfuscating!");
       throw new Error("Please open a file before obfuscating!");
     }
+
     obfuscateScript(
       vscode.window.activeTextEditor.document.getText(),
       obfuscateBody

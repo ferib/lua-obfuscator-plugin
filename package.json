@@ -45,6 +45,11 @@
 					],
 					"description": "Select the minification option"
 				},
+				"lua-obfuscator.ApiKey": {
+					"type": "string",
+					"default": "",
+					"description": "REST API key"
+				},
 				"lua-obfuscator.ControlFlowFlattenV1AllBlocks": {
 					"type": "boolean",
 					"default": false,

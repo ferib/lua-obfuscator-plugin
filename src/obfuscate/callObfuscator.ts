@@ -11,20 +11,25 @@ export function obfuscateScript(script: string, callback: Callback) {
   callObfuscator(script, callback);
 }
 
-type Response = {code: string|null,message:string|null, sessionId: string|null}
+type Response = { code: string | null, message: string | null, sessionId: string | null }
 
 export async function callObfuscator(
   script: string,
   callback: Callback
 ): Promise<void> {
+  const settings = vscode.workspace.getConfiguration("lua-obfuscator");
+  if (!settings) {
+    vscode.window.showErrorMessage("Failed opening settings!");
+    throw new Error();
+  }
   const config = parseConfig();
   console.log(constants.obfuscateUrl + "newscript")
   console.log(script)
-  const newScript : AxiosResponse<Response> = await axios
+  const newScript: AxiosResponse<Response> = await axios
     .post(constants.obfuscateUrl + "newscript", script, {
       headers: {
         "Content-Type": "text/plain",
-        apikey: constants.apiKey,
+        apikey: settings.get("ApiKey"),
       },
     })
     .catch((err) => {
@@ -48,12 +53,12 @@ export async function callObfuscator(
     vscode.window.showErrorMessage("Failed to upload script!");
     throw Error();
   }
-    
-  const obfsucated : AxiosResponse<Response> = await axios
+
+  const obfsucated: AxiosResponse<Response> = await axios
     .post(constants.obfuscateUrl + "Obfuscate", config, {
       headers: {
         "Content-Type": "text/plain",
-        apikey: constants.apiKey,
+        apikey: settings.get("ApiKey"),
         sessionId: newScript.data.sessionId,
       },
     })
@@ -61,17 +66,18 @@ export async function callObfuscator(
       console.trace({
         err,
         config,
-        
-             headers: {
-               apikey: constants.apiKey,
-               sessionId: newScript.data.sessionId,
-             }
-        ,}
-      )
-        if (err.response.status === 502) {
-          vscode.window.showErrorMessage("Something went wrong, try again later!");
-          throw Error();
+
+        headers: {
+          apikey: settings.get("ApiKey"),
+          sessionId: newScript.data.sessionId,
         }
+        ,
+      }
+      )
+      if (err.response.status === 502) {
+        vscode.window.showErrorMessage("Something went wrong, try again later!");
+        throw Error();
+      }
       vscode.window.showErrorMessage(
         "Failed to obfuscate script! (Error: " + err.response.status + ")"
       );
