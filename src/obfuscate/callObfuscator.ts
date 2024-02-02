@@ -1,8 +1,12 @@
 import * as vscode from "vscode";
 import constants from "../utils/constants.json";
-import { parseConfig } from "../utils/getConfigs";
+import {
+  parseConfig
+} from "../utils/getConfigs";
 import axios from "axios";
-import { AxiosResponse } from "axios";
+import {
+  AxiosResponse
+} from "axios";
 
 export type Callback = (code: string) => void;
 
@@ -11,7 +15,11 @@ export function obfuscateScript(script: string, callback: Callback) {
   callObfuscator(script, callback);
 }
 
-type Response = { code: string | null, message: string | null, sessionId: string | null }
+type Response = {
+  code: string | null,
+  message: string | null,
+  sessionId: string | null
+}
 
 export async function callObfuscator(
   script: string,
@@ -36,17 +44,16 @@ export async function callObfuscator(
       if (err.response.status === 502) {
         vscode.window.showErrorMessage("Something went wrong with uploading, try again later!");
         throw Error();
+      } else if (err.response.status === 403) {
+        vscode.window.showErrorMessage("Failed to upload script! Invalid API Key. (Error: " + err.response.status + ")");
+        throw Error();
       }
-      vscode.window.showErrorMessage(
-        "Failed to upload script! (Error: " + err.response.status + ")"
-      );
+      vscode.window.showErrorMessage("Failed to upload script! (Error: " + err.response.status + ")");
       console.log(err.message);
       throw Error();
     });
   if (newScript.status !== 200) {
-    vscode.window.showErrorMessage(
-      "Failed uploading script! (Error: " + newScript.status + ")"
-    );
+    vscode.window.showErrorMessage("Failed uploading script! (Error: " + newScript.status + ")");
     throw Error();
   }
   if (!newScript.data.sessionId) {
@@ -70,17 +77,13 @@ export async function callObfuscator(
         headers: {
           apikey: settings.get("ApiKey"),
           sessionId: newScript.data.sessionId,
-        }
-        ,
-      }
-      )
+        },
+      })
       if (err.response.status === 502) {
         vscode.window.showErrorMessage("Something went wrong, try again later!");
         throw Error();
       }
-      vscode.window.showErrorMessage(
-        "Failed to obfuscate script! (Error: " + err.response.status + ")"
-      );
+      vscode.window.showErrorMessage("Failed to obfuscate script! (Error: " + err.response.status + ")");
       throw Error();
     });
   if (obfsucated.status === 404) {
