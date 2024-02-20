@@ -1,4 +1,4 @@
 {
-    "obfuscateUrl": "https://luaobfuscator.com/api/obfuscator/",
+    "obfuscateUrl": "https://api.luaobfuscator.com/v1/obfuscator/",
     "apiKey":"test"
 }
