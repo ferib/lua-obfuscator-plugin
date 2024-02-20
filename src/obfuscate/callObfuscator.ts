@@ -62,7 +62,7 @@ export async function callObfuscator(
   }
 
   const obfsucated: AxiosResponse<Response> = await axios
-    .post(constants.obfuscateUrl + "Obfuscate", config, {
+    .post(constants.obfuscateUrl + "obfuscate", config, {
       headers: {
         "Content-Type": "text/plain",
         apikey: settings.get("ApiKey"),
@@ -91,7 +91,7 @@ export async function callObfuscator(
     throw Error();
   }
   if (!obfsucated.data || !obfsucated.data.code) {
-    vscode.window.showErrorMessage("Obfuscation failed!");
+    vscode.window.showErrorMessage(`${obfsucated.data.message || "Lua script failed to upload! (unknown error)"}`);
     throw Error();
   }
   callback(obfsucated.data.code);
