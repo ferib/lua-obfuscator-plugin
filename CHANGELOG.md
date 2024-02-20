@@ -2,6 +2,10 @@
 
 All notable changes to the `lua-obfuscator` extension will be documented in this file.
 
+## [2.1.1]
+- Bugfix 'Wow Error Parser'
+- Add `apikey` config back
+
 ## [2.1.0]
 - Removed profiler feature
 - Improved helper panel
